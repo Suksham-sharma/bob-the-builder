@@ -29,9 +29,6 @@ importers:
       openai:
         specifier: ^4.74.0
         version: 4.74.0(zod@3.23.8)
-      prompts:
-        specifier: link:@langchain/core/prompts
-        version: link:@langchain/core/prompts
       typescript:
         specifier: ^5.7.2
         version: 5.7.2

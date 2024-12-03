@@ -29,6 +29,9 @@ const model = new ChatOpenAI({
 const memory = new ConversationSummaryMemory({
   memoryKey: "chat_history",
   llm: model,
+  inputKey: "input",
+  outputKey: "text",
+  returnMessages: true,
 });
 
 app.post("/template", async (req, res) => {
@@ -77,32 +80,41 @@ app.post("/template", async (req, res) => {
 });
 
 app.post("/chat", async (req, res) => {
-  const message = req.body.message;
+  const message = req.body;
+  console.log(message);
 
   try {
     const systemPrompt = getSystemPrompt();
 
-    // Validate and escape template
-    const chatPrompt = PromptTemplate.fromTemplate(`${systemPrompt}
-
-Current conversation summary:
-{{chat_history}}
-
-Most recent message:
-{{input}}`);
-
     const prompt = ChatPromptTemplate.fromMessages([
       new SystemMessage(systemPrompt),
-      new MessagesPlaceholder("chat_history"),
     ]);
 
-    const chain2 = prompt.pipe(model);
-    const response2 = await chain2.invoke({ input: message });
+    const flatInput =
+      message.prompts.join("\n") +
+      "\n" +
+      message.uiPrompts.join("\n") +
+      "\n" +
+      message.userPrompt.join("\n");
 
-    res.json({
-      response: response2?.content,
+    const chain = new LLMChain({
+      llm: model,
+      prompt: prompt,
     });
+
+    try {
+      console.log("Flat Input:", flatInput);
+      const response = await chain.invoke({ input: flatInput });
+      console.log("Raw Chain Response:", JSON.stringify(response, null, 2));
+      res.json(response);
+    } catch (error: any) {
+      console.error("Invocation error:", error.message);
+      res
+        .status(500)
+        .json({ message: "Error processing request", error: error.message });
+    }
   } catch (error: any) {
+    console.log(error.message);
     res
       .status(500)
       .json({ message: "Error processing chat request", error: error.message });
